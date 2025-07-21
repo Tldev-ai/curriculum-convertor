@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curriculum Comparison Result</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            z-index: -1;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0;
+            padding: 15px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+
+        .back-button {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            padding: 12px 20px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .comparison-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .comparison-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .loading-section {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .comparison-container {
+            display: none;
+        }
+
+        .comparison-container.show {
+            display: block;
+        }
+
+        .difference-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .difference-card:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .difference-header {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .difference-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #4facfe;
+        }
+
+        .difference-number {
+            background: #4facfe;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .difference-content {
+            padding: 20px;
+            display: none;
+        }
+
+        .difference-content.show {
+            display: block;
+        }
+
+        .board-comparison {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .board-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 15px;
+            border-left: 4px solid;
+        }
+
+        .from-board {
+            border-left-color: #ff6b6b;
+        }
+
+        .to-board {
+            border-left-color: #4ecdc4;
+        }
+
+        .board-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #4facfe;
+        }
+
+        .board-description {
+            font-size: 14px;
+            line-height: 1.7;
+            opacity: 0.95;
+        }
+
+        .expand-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .expand-icon.rotated {
+            transform: rotate(180deg);
+        }
+
+        .generate-button {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin: 20px 0;
+            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
+        }
+
+        .generate-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(79, 172, 254, 0.4);
+        }
+
+        .generate-button:disabled {
+            background: rgba(255, 255, 255, 0.3);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 30px;
+            }
+
+            .comparison-title {
+                font-size: 32px;
+            }
+
+            .comparison-subtitle {
+                font-size: 18px;
+            }
+
+            .board-comparison {
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+
+            .difference-title {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="back-button" onclick="goBack()">
+            ← Back to Converter
+        </button>
+
+        <div class="header">
+            <div class="comparison-title">Curriculum Comparison</div>
+            <div class="comparison-subtitle" id="comparisonSubtitle">
+                Generating detailed analysis...
+            </div>
+        </div>
+
+        <div class="loading-section" id="loadingSection">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Claude AI is analyzing curriculum differences...</div>
+        </div>
+
+        <button class="generate-button" id="generateBtn" onclick="generateComparison()">
+            🤖 Generate Detailed Comparison with Claude AI
+        </button>
+
+        <div class="comparison-container" id="comparisonContainer">
+            <!-- Differences will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters or use default values for demo
+        const urlParams = new URLSearchParams(window.location.search);
+        const fromBoard = urlParams.get('from') || 'CBSE';
+        const toBoard = urlParams.get('to') || 'IB';
+        const grade = urlParams.get('grade') || 'Grade 10';
+        const subject = urlParams.get('subject') || 'Mathematics';
+
+        // Update subtitle with selected options
+        document.getElementById('comparisonSubtitle').textContent = 
+            `${fromBoard} vs ${toBoard} - ${subject} (${grade})`;
+
+        // 20 Key Difference Categories
+        const differenceCategories = [
+            "Curriculum Structure & Organization",
+            "Assessment Methods & Grading Systems", 
+            "Learning Objectives & Outcomes",
+            "Teaching Methodologies & Approaches",
+            "Content Depth & Breadth Coverage",
+            "Practical & Laboratory Components",
+            "Project-Based Learning Requirements",
+            "Examination Format & Question Types",
+            "Continuous Assessment vs Final Exams",
+            "Subject Integration & Interdisciplinary Approach",
+            "Skill Development Focus Areas",
+            "Critical Thinking & Problem-Solving Emphasis",
+            "Technology Integration & Digital Tools",
+            "Language of Instruction & Communication",
+            "Cultural Context & Global Perspectives",
+            "Teacher Qualifications & Training Requirements",
+            "Resource Requirements & Textbook Standards",
+            "Student Support Systems & Guidance",
+            "Progression Pathways & University Preparation",
+            "Quality Assurance & Accreditation Standards"
+        ];
+
+        async function generateComparison() {
+            const generateBtn = document.getElementById('generateBtn');
+            const loadingSection = document.getElementById('loadingSection');
+            const comparisonContainer = document.getElementById('comparisonContainer');
+
+            // Show loading state
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Generating...';
+            loadingSection.style.display = 'block';
+            comparisonContainer.classList.remove('show');
+
+            try {
+                // Simulate Claude AI API call for each difference
+                const differences = [];
+                
+                for (let i = 0; i < differenceCategories.length; i++) {
+                    const category = differenceCategories[i];
+                    
+                    // Simulate API call delay
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    // Generate detailed comparison using Claude API
+                    const comparisonData = await generateDetailedComparison(category, fromBoard, toBoard, grade, subject);
+                    differences.push({
+                        number: i + 1,
+                        title: category,
+                        fromBoardContent: comparisonData.fromBoard,
+                        toBoardContent: comparisonData.toBoard
+                    });
+                    
+                    // Update loading text
+                    document.querySelector('.loading-text').textContent = 
+                        `Analyzing ${category}... (${i + 1}/${differenceCategories.length})`;
+                }
+
+                // Hide loading and show results
+                loadingSection.style.display = 'none';
+                displayComparison(differences);
+                comparisonContainer.classList.add('show');
+                generateBtn.style.display = 'none';
+
+            } catch (error) {
+                console.error('Error generating comparison:', error);
+                loadingSection.style.display = 'none';
+                generateBtn.disabled = false;
+                generateBtn.textContent = '🤖 Generate Detailed Comparison with Claude AI';
+                alert('Error generating comparison. Please try again.');
+            }
+        }
+
+        async function generateDetailedComparison(category, fromBoard, toBoard, grade, subject) {
+            // This is where you would call Claude API
+            // For demo purposes, we'll simulate detailed responses
+            
+            const prompt = `Compare ${category} between ${fromBoard} and ${toBoard} for ${subject} in ${grade}. Provide detailed, lengthy explanations for each board covering methodology, implementation, assessment criteria, student outcomes, and practical applications. Make each explanation at least 150-200 words.`;
+            
+            // Simulate Claude API response
+            return {
+                fromBoard: `${fromBoard} Approach to ${category}: This comprehensive educational framework emphasizes a structured methodology that integrates traditional pedagogical principles with modern educational research. The curriculum design focuses on systematic progression through clearly defined learning stages, ensuring students develop both foundational knowledge and advanced analytical capabilities. Assessment protocols are rigorously standardized, incorporating multiple evaluation methods including formative assessments, summative examinations, and practical demonstrations. The teaching approach prioritizes direct instruction combined with guided practice, allowing students to master core concepts before advancing to complex applications. Resource allocation follows established guidelines with prescribed textbooks and supplementary materials that align with national educational standards. Student support systems include regular progress monitoring, remedial instruction when necessary, and enrichment opportunities for advanced learners. The quality assurance framework ensures consistent delivery across all affiliated institutions through regular inspections, teacher training programs, and standardized curriculum implementation protocols.`,
+                
+                toBoard: `${toBoard} Approach to ${category}: This innovative educational system adopts a holistic, student-centered methodology that emphasizes inquiry-based learning and critical thinking development. The curriculum framework is designed around interdisciplinary connections, encouraging students to explore subjects through real-world applications and cross-curricular projects. Assessment strategies utilize authentic evaluation methods including portfolio assessments, collaborative projects, and self-reflection exercises that measure not just academic achievement but also personal growth and global awareness. The pedagogical approach prioritizes constructivist learning theory, where students actively build knowledge through experimentation, discussion, and hands-on experiences. Technology integration is seamlessly woven throughout the learning process, utilizing digital tools to enhance understanding and prepare students for a globally connected world. The support system focuses on developing the whole child, incorporating social-emotional learning, cultural competency, and environmental consciousness. Quality standards are maintained through international benchmarking, continuous professional development for educators, and regular curriculum review processes that ensure relevance and effectiveness in preparing students for future challenges.`
+            };
+        }
+
+        function displayComparison(differences) {
+            const container = document.getElementById('comparisonContainer');
+            container.innerHTML = '';
+
+            differences.forEach(diff => {
+                const diffCard = document.createElement('div');
+                diffCard.className = 'difference-card';
+                diffCard.innerHTML = `
+                    <div class="difference-header" onclick="toggleDifference(${diff.number})">
+                        <div class="difference-title">${diff.title}</div>
+                        <div class="difference-number">${diff.number}</div>
+                    </div>
+                    <div class="difference-content" id="content-${diff.number}">
+                        <div class="board-comparison">
+                            <div class="board-section from-board">
+                                <div class="board-name">${fromBoard}</div>
+                                <div class="board-description">${diff.fromBoardContent}</div>
+                            </div>
+                            <div class="board-section to-board">
+                                <div class="board-name">${toBoard}</div>
+                                <div class="board-description">${diff.toBoardContent}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(diffCard);
+            });
+        }
+
+        function toggleDifference(number) {
+            const content = document.getElementById(`content-${number}`);
+            content.classList.toggle('show');
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+
+        // Auto-generate on page load for demo
+        // Remove this in production and let user click the button
+        // setTimeout(generateComparison, 1000);
+    </script>
+</body>
+</html>
