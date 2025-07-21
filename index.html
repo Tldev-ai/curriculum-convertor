@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ii Tutions Curriculum Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #8B7ED8 0%, #9D8DF1 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #00BFFF 0%, #1E90FF 100%);
+            color: white;
+            text-align: center;
+            padding: 60px 40px;
+            border-radius: 30px 30px 0 0;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.3rem;
+            opacity: 0.95;
+            font-weight: 400;
+        }
+        
+        .main-content {
+            padding: 50px 40px;
+            background: white;
+        }
+        
+        .conversion-section {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        .start-conversion-btn {
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
+            color: white;
+            border: none;
+            padding: 20px 50px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(255,107,107,0.3);
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .start-conversion-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(255,107,107,0.4);
+        }
+        
+        .stats-counter {
+            background: linear-gradient(135deg, #7B68EE 0%, #9370DB 100%);
+            color: white;
+            padding: 25px 40px;
+            border-radius: 50px;
+            margin: 30px auto;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(123,104,238,0.4);
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
+            font-weight: 600;
+            font-size: 1.3rem;
+            max-width: fit-content;
+        }
+        
+        .stats-icon {
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .stats-text {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stats-number {
+            font-weight: 700;
+            color: white;
+        }
+        
+        .reviews-section {
+            margin-top: 60px;
+        }
+        
+        .reviews-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        
+        .reviews-header .star-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .reviews-header h2 {
+            font-size: 3rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        
+        .reviews-header p {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+        
+        .reviews-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .review-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+        }
+        
+        .review-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .review-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .review-card h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .review-description {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        
+        .review-stars {
+            color: #FFD700;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            letter-spacing: 3px;
+        }
+        
+        .review-count {
+            color: #999;
+            font-size: 1rem;
+        }
+        
+        .view-reviews-btn {
+            background: linear-gradient(135deg, #7B68EE 0%, #9370DB 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(123,104,238,0.3);
+            margin-top: 20px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .view-reviews-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(123,104,238,0.4);
+        }
+        
+        .navigation-menu {
+            background: rgba(255,255,255,0.95);
+            padding: 15px 0;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .nav-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-link {
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            background: #8B7ED8;
+            color: white;
+        }
+        
+        .nav-link.active {
+            background: #8B7ED8;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 20px;
+                border-radius: 20px;
+            }
+            
+            .header {
+                padding: 40px 20px;
+                border-radius: 20px 20px 0 0;
+            }
+            
+            .header h1 {
+                font-size: 2.2rem;
+            }
+            
+            .header p {
+                font-size: 1.1rem;
+            }
+            
+            .main-content {
+                padding: 30px 20px;
+            }
+            
+            .review-card {
+                padding: 30px 20px;
+            }
+            
+            .reviews-header h2 {
+                font-size: 2.2rem;
+            }
+            
+            .nav-links {
+                gap: 15px;
+            }
+            
+            .nav-link {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 20px 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .start-conversion-btn {
+                padding: 15px 30px;
+                font-size: 1.1rem;
+            }
+            
+            .stats-counter {
+                flex-direction: column;
+                gap: 10px;
+                font-size: 1.1rem;
+                padding: 20px 30px;
+            }
+            
+            .nav-links {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Menu -->
+    <div class="navigation-menu">
+        <div class="nav-links">
+            <a href="/" class="nav-link active">🏠 Home</a>
+            <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+            <a href="/converter" class="nav-link">🔄 Converter</a>
+            <a href="/generated" class="nav-link">📁 Generated Files</a>
+            <a href="/reviews" class="nav-link">⭐ Reviews</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>II Tutions Curriculum Converter</h1>
+            <p>Transform Your Educational Content Seamlessly</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="conversion-section">
+                <a href="/converter" class="start-conversion-btn">
+                    START CONVERSION
+                </a>
+                
+                <div class="stats-counter">
+                    <span class="stats-icon">📊</span>
+                    <div class="stats-text">
+                        <span class="stats-number">3,678</span>
+                        <span>Curriculums are Generated in Previous Days</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="reviews-section">
+                <div class="reviews-header">
+                    <span class="star-icon">⭐</span>
+                    <h2>Reviews</h2>
+                    <p>Review your progress, results, and get feedback<br>from teachers and parents</p>
+                </div>
+                
+                <div class="reviews-container">
+                    <div class="review-card">
+                        <span class="review-icon">👨‍🏫</span>
+                        <h3>Teacher Reviews</h3>
+                        <p class="review-description">Get feedback from educators</p>
+                        <div class="review-stars">⭐⭐⭐⭐⭐</div>
+                        <div class="review-count">124 reviews</div>
+                    </div>
+                    
+                    <div class="review-card">
+                        <span class="review-icon">👨‍👩‍👧‍👦</span>
+                        <h3>Parent Reviews</h3>
+                        <p class="review-description">Parental feedback & support</p>
+                        <div class="review-stars">⭐⭐⭐⭐⭐</div>
+                        <div class="review-count">89 reviews</div>
+                    </div>
+                    
+                    <div class="review-card">
+                        <span class="review-icon">👨‍🏫</span>
+                        <h3>Teacher Reviews</h3>
+                        <p class="review-description">Academic performance insights</p>
+                        <div class="review-stars">⭐⭐⭐⭐⭐</div>
+                        <div class="review-count">156 reviews</div>
+                    </div>
+                    
+                    <div class="review-card">
+                        <span class="review-icon">👨‍👩‍👧‍👦</span>
+                        <h3>Parent Reviews</h3>
+                        <p class="review-description">Progress tracking & guidance</p>
+                        <div class="review-stars">⭐⭐⭐⭐⭐</div>
+                        <div class="review-count">201 reviews</div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center;">
+                    <a href="/reviews" class="view-reviews-btn">
+                        View Reviews
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive animations
+        document.addEventListener('DOMContentLoaded', function() {
+            const counter = document.querySelector('.stats-number');
+            const targetNumber = 3678;
+            let currentNumber = 0;
+            const increment = targetNumber / 100;
+            
+            const countAnimation = setInterval(() => {
+                currentNumber += increment;
+                if (currentNumber >= targetNumber) {
+                    currentNumber = targetNumber;
+                    clearInterval(countAnimation);
+                }
+                counter.textContent = Math.floor(currentNumber).toLocaleString();
+            }, 20);
+        });
+
+        // Highlight active navigation link
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
