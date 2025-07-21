@@ -1,0 +1,696 @@
+from flask import Flask, render_template, request, jsonify
+import json
+import requests
+import traceback
+
+app = Flask(__name__)
+app.secret_key = 'your-secret-key-here'
+
+# Claude API Configuration
+CLAUDE_API_KEY = ""
+CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
+
+# Initialize components (with error handling for missing modules)
+try:
+    from src.components.dashboard import Dashboard
+    dashboard = Dashboard()
+except ImportError as e:
+    print(f"Warning: Dashboard component not found: {e}")
+    dashboard = None
+
+try:
+    from src.components.curriculum_converter import CurriculumConverter
+    converter = CurriculumConverter()
+except ImportError as e:
+    print(f"Warning: CurriculumConverter component not found: {e}")
+    converter = None
+
+try:
+    from src.components.curriculum_generator import CurriculumGenerator
+    generator = CurriculumGenerator()
+except ImportError as e:
+    print(f"Warning: CurriculumGenerator component not found: {e}")
+    generator = None
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/dashboard')
+def dashboard_page():
+    try:
+        if dashboard:
+            stats = dashboard.get_user_stats()
+            recent_activity = dashboard.get_recent_activity()
+        else:
+            stats = {"total_conversions": 0, "active_users": 0}
+            recent_activity = []
+        return render_template('dashboard.html', stats=stats, activity=recent_activity)
+    except Exception as e:
+        print(f"Dashboard error: {str(e)}")
+        return render_template('dashboard.html', stats={"total_conversions": 0, "active_users": 0}, activity=[])
+
+@app.route('/converter')
+def converter_page():
+    return render_template('converter.html')
+
+@app.route('/generated')
+def generated_page():
+    try:
+        if generator:
+            files = generator.get_generated_files()
+        else:
+            files = []
+        return render_template('generated.html', files=files)
+    except Exception as e:
+        print(f"Generated files error: {str(e)}")
+        return render_template('generated.html', files=[])
+
+@app.route('/reviews')
+def reviews_page():
+    return render_template('reviews.html')
+
+@app.route('/comparison-result')
+def comparison_result():
+    from_board = request.args.get('from', 'CBSE')
+    to_board = request.args.get('to', 'IB')
+    grade = request.args.get('grade', 'Grade 10')
+    subject = request.args.get('subject', 'Mathematics')
+    
+    return render_template('comparison_result.html', 
+                         from_board=from_board, 
+                         to_board=to_board, 
+                         grade=grade, 
+                         subject=subject)
+
+@app.route('/api/convert', methods=['POST'])
+def convert_curriculum():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+        
+        file = request.files['file']
+        if converter:
+            result = converter.process_file(file)
+        else:
+            result = {'error': 'Converter component not available'}
+        return jsonify(result)
+    
+    except Exception as e:
+        print(f"Convert error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/dashboard-stats')
+def get_dashboard_stats():
+    try:
+        if dashboard:
+            return jsonify(dashboard.get_stats())
+        else:
+            return jsonify({"total_conversions": 0, "active_users": 0})
+    except Exception as e:
+        print(f"Dashboard stats error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/generate-comprehensive-comparison', methods=['POST'])
+def generate_comprehensive_comparison():
+    try:
+        data = request.get_json()
+        from_board = data.get('fromBoard', 'CBSE')
+        to_board = data.get('toBoard', 'IB')
+        grade = data.get('grade', 'Grade 10')
+        subject = data.get('subject', 'Mathematics')
+        
+        print(f"Generating comprehensive comparison for: {from_board} to {to_board}, {subject}, {grade}")
+        
+        comparison_result = generate_3_column_table_comparison(from_board, to_board, grade, subject)
+        
+        return jsonify({
+            'success': True,
+            'comparison': comparison_result
+        })
+        
+    except Exception as e:
+        print(f"Error in generate_comprehensive_comparison: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/generate-specific-guidance', methods=['POST'])
+def generate_specific_guidance():
+    try:
+        data = request.get_json()
+        from_board = data.get('fromBoard', 'CBSE')
+        to_board = data.get('toBoard', 'IB')
+        grade = data.get('grade', 'Grade 10')
+        subject = data.get('subject', 'Mathematics')
+        audience = data.get('audience', 'parent')
+        
+        print(f"Generating {audience} guidance for: {from_board} to {to_board}, {subject}, {grade}")
+        
+        if audience == 'parent':
+            guidance = generate_parent_guidance(from_board, to_board, grade, subject)
+        else:
+            guidance = generate_teacher_guidance(from_board, to_board, grade, subject)
+        
+        return jsonify({
+            'success': True,
+            'guidance': guidance
+        })
+        
+    except Exception as e:
+        print(f"Error in generate_specific_guidance: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+def generate_3_column_table_comparison(from_board, to_board, grade, subject):
+    """Generate structured data for 3-column table with ALL comprehensive categories including detailed Programme Structure"""
+    
+    # Complete list of 35+ categories covering ALL aspects from the comprehensive guide
+    comprehensive_categories = [
+        'Educational Philosophy & Approach',
+        'Programme Structure & Year Classifications',
+        'Assessment Methods & Grading Systems',
+        'Assessment Criteria & Objectives Framework',
+        'Paper Types & Assessment Components',
+        'Teaching Methodologies & Pedagogical Approaches',
+        'Learning Objectives & Outcomes',
+        'Textbooks, Resources & Materials',
+        'Homework, Assignments & Project Requirements',
+        'Practical Components & Laboratory Work',
+        'Technology Integration & Digital Learning',
+        'Language Requirements & Communication Skills',
+        'Cultural Context & Global Perspective',
+        'School Types & Institutional Requirements',
+        'Teacher Training & Professional Development',
+        'Class Size & Student-Teacher Ratios',
+        'University Recognition & Pathways',
+        'Career Preparation & Skill Development',
+        'Extracurricular Integration & Holistic Development',
+        'Student Support Services & Guidance',
+        'Parent Involvement & Communication',
+        'Cost Implications & Financial Requirements',
+        'Transition Challenges & Adaptation Period',
+        'Supplementary Education & Additional Support',
+        'Quality Assurance & Standards Monitoring',
+        'International Mobility & Transferability',
+        'Timeline & Implementation Strategy',
+        'Subject Flexibility & Options',
+        'Examination Sessions & Result Declaration',
+        'Professional Terminology & Board-Specific Language',
+        'Distance Learning & Private Candidate Options',
+        'Special Needs & Inclusion Support',
+        'Regional Variations & Local Adaptations',
+        'Alternative Examination Boards & Pathways',
+        'Teacher Transition Requirements & Training'
+    ]
+    
+    comprehensive_prompt = f"""You are an expert educational consultant with deep knowledge of all education boards including CBSE, ICSE, IB, Cambridge, and State Boards. Generate an extremely detailed comprehensive curriculum comparison between {from_board} and {to_board} for {subject} in {grade}.
+
+CRITICAL REQUIREMENTS FOR COMPREHENSIVE 25,000+ WORD ANALYSIS:
+
+1. Generate analysis for ALL 35 categories listed below
+2. Each category MUST have 4-5 detailed paragraphs for EACH board (400-500 words per board per category)
+3. Include SPECIFIC examples, practical implications, and actionable advice
+4. Use PROFESSIONAL TERMINOLOGY specific to each board
+5. NO bullet points - only flowing paragraph format
+6. Focus on {grade} {subject} specific information where relevant
+7. Include detailed financial costs, examination specifics, and transition guidance
+
+SPECIAL EMPHASIS ON PROGRAMME STRUCTURE & YEAR CLASSIFICATIONS:
+- Provide complete grade-wise breakdown with age ranges
+- Include specific programme levels (PYP/MYP/DP for IB, Primary/Secondary/A-Levels for Cambridge)
+- Detail board examination schedules and assessment timelines
+- Explain progression pathways and qualification requirements
+- Compare duration, flexibility, and structural differences
+
+MANDATORY 35 CATEGORIES TO ANALYZE IN DETAIL:
+
+1. Educational Philosophy & Approach
+2. Programme Structure & Year Classifications  
+3. Assessment Methods & Grading Systems
+4. Assessment Criteria & Objectives Framework
+5. Paper Types & Assessment Components
+6. Teaching Methodologies & Pedagogical Approaches
+7. Learning Objectives & Outcomes
+8. Textbooks, Resources & Materials
+9. Homework, Assignments & Project Requirements
+10. Practical Components & Laboratory Work
+11. Technology Integration & Digital Learning
+12. Language Requirements & Communication Skills
+13. Cultural Context & Global Perspective
+14. School Types & Institutional Requirements
+15. Teacher Training & Professional Development
+16. Class Size & Student-Teacher Ratios
+17. University Recognition & Pathways
+18. Career Preparation & Skill Development
+19. Extracurricular Integration & Holistic Development
+20. Student Support Services & Guidance
+21. Parent Involvement & Communication
+22. Cost Implications & Financial Requirements
+23. Transition Challenges & Adaptation Period
+24. Supplementary Education & Additional Support
+25. Quality Assurance & Standards Monitoring
+26. International Mobility & Transferability
+27. Timeline & Implementation Strategy
+28. Subject Flexibility & Options
+29. Examination Sessions & Result Declaration
+30. Professional Terminology & Board-Specific Language
+31. Distance Learning & Private Candidate Options
+32. Special Needs & Inclusion Support
+33. Regional Variations & Local Adaptations
+34. Alternative Examination Boards & Pathways
+35. Teacher Transition Requirements & Training
+
+SPECIFIC BOARD DETAILS TO INCLUDE:
+
+FOR {from_board}:
+- Exact grading systems (A1-E for CBSE, 1-7 for IB, A*-G for Cambridge, percentage for ICSE/State)
+- Complete programme structure with precise age classifications
+- Specific examination sessions, dates, and registration processes
+- Board-specific terminology and professional language
+- Detailed cost breakdowns including fees, materials, coaching, hidden costs
+- Teacher qualification requirements and mandatory training
+- University recognition patterns and admission preferences
+- Regional variations and local adaptations
+- Alternative pathways and distance learning availability
+
+FOR {to_board}:
+- Complete programme hierarchy and progression pathways
+- Assessment criteria frameworks (4 criteria A/B/C/D for IB, Assessment Objectives for Cambridge)
+- Paper types, component weightings, and examination structures
+- Professional development requirements and certification processes
+- International recognition scope and transferability
+- Cultural context integration and global perspective elements
+- Technology platforms, digital learning systems, and online resources
+- Special provisions for inclusion, accessibility, and diverse learning needs
+
+RESPONSE FORMAT - Respond ONLY with valid JSON:
+
+{{
+  "categories": [
+    {{
+      "name": "Programme Structure & Year Classifications",
+      "fromBoardContent": "The {from_board} programme structure represents a comprehensive educational framework that spans specific age groups and grade classifications designed to provide systematic academic progression from foundational learning through advanced specialized study. The structural organization follows a carefully planned hierarchy with Primary stage (Classes 1-5, ages 6-11), Middle stage (Classes 6-8, ages 11-14), Secondary stage (Classes 9-10, ages 14-16), and Senior Secondary stage (Classes 11-12, ages 16-18), each with distinct learning objectives, assessment methodologies, and progression requirements. This systematic approach ensures that students receive age-appropriate curriculum content while building upon previously acquired knowledge and skills in a logical, developmental sequence that prepares them for increasingly complex academic challenges.
+
+The grade-wise classification system within {from_board} incorporates specific learning milestones and assessment benchmarks that students must achieve before progressing to subsequent levels. For {subject} in {grade}, this structure provides clearly defined learning outcomes, curriculum depth requirements, and assessment criteria that align with national educational standards while maintaining flexibility for institutional adaptation. The progression pathway includes mandatory board examinations at key transition points, specifically the Class 10 board examination (Secondary School Certificate) and Class 12 board examination (Higher Secondary Certificate), which serve as crucial qualification checkpoints for further education and career opportunities. The structural framework also accommodates various stream options at the senior secondary level, including Science, Commerce, and Humanities streams, each with specialized subject combinations that align with different career pathways and higher education requirements.
+
+The temporal organization of the academic year follows a standardized calendar with specific examination schedules, result declaration timelines, and admission processes that coordinate with national and international academic calendars. The {from_board} structure emphasizes continuous internal assessment integrated with terminal board examinations, creating a balanced evaluation system that reduces exam pressure while maintaining academic rigor. This approach includes provisions for supplementary examinations, improvement opportunities, and credit transfer mechanisms that support student success while maintaining educational standards. The programme structure also incorporates mandatory co-curricular activities, life skills education, and vocational training components that contribute to holistic development beyond pure academic achievement.
+
+Furthermore, the {from_board} structural framework includes specific teacher qualification requirements, infrastructure standards, and quality assurance mechanisms that ensure consistent educational delivery across affiliated institutions. The system provides clear progression pathways to higher education institutions, professional courses, and international academic programs, with established recognition agreements and transfer protocols that facilitate student mobility. Regular structural reviews and updates ensure that the programme remains relevant to changing educational needs, technological advancements, and global academic trends while maintaining its core educational philosophy and learning objectives.",
+      "toBoardContent": "The {to_board} programme structure embodies an internationally recognized educational continuum that provides seamless progression across distinct yet interconnected programme levels, each specifically designed for particular age groups and developmental stages. The structural hierarchy encompasses Primary Years Programme (PYP, ages 3-12), Middle Years Programme (MYP, ages 11-16), Diploma Programme (DP, ages 16-19), and Career-related Programme (CP, ages 16-19), creating a comprehensive educational pathway that emphasizes inquiry-based learning, international mindedness, and holistic development. This multi-layered approach ensures that students receive developmentally appropriate curriculum experiences while building essential skills for global citizenship and lifelong learning within an internationally consistent framework that maintains high academic standards across diverse cultural and educational contexts.
+
+The year classification system within {to_board} follows international best practices with flexible entry points and progression criteria that accommodate diverse educational backgrounds and learning needs. For {subject} in {grade}, the programme structure provides internationally benchmarked learning objectives, assessment criteria, and qualification standards that enable seamless transfer between institutions worldwide. The assessment philosophy integrates continuous evaluation through criterion-referenced assessment methods that measure student achievement against clearly defined international standards rather than comparative peer performance. Key qualification milestones include the MYP Certificate (completion of Year 5), IB Diploma (completion of DP), and Career-related Programme Certificate, each recognized by universities and employers globally for their academic rigor and comprehensive skill development focus.
+
+The academic calendar structure accommodates international examination schedules with multiple assessment sessions throughout the year, providing flexibility for schools in different hemispheres and educational systems. The {to_board} framework emphasizes extended essay research, theory of knowledge exploration, creativity-activity-service (CAS) experiences, and personal projects that demonstrate independent learning capabilities and real-world application of academic knowledge. This structure requires significant teacher training and certification, with mandatory professional development workshops, ongoing assessment training, and international collaboration opportunities that ensure consistent quality delivery across authorized schools worldwide.
+
+The programme's international scope includes recognition agreements with universities in over 75 countries, established transfer protocols for student mobility, and alignment with major international education systems that facilitate seamless educational transitions. The structural framework incorporates multiple language requirements, intercultural competency development, and global perspective integration that prepare students for international higher education and global career opportunities. Regular programme evaluation through external validation, stakeholder feedback, and international research ensures continuous improvement and relevance to changing global educational needs while maintaining the programme's distinctive international character and educational excellence."
+    }}
+    // CONTINUE FOR ALL 35 CATEGORIES WITH SAME DETAILED FORMAT
+  ]
+}}
+
+CONTENT REQUIREMENTS FOR EACH CATEGORY:
+- 4-5 paragraphs per board (400-500 words each)
+- Board-specific terminology and professional language
+- Specific examples related to {grade} {subject}
+- Detailed financial costs and investment analysis
+- Teacher training requirements and career implications
+- University recognition and pathway specifics
+- Technology integration and digital platform details
+- Assessment criteria and grading system explanations
+- Regional variations and cultural adaptations
+- Transition challenges and adaptation strategies
+- Professional development opportunities
+
+DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON. NO EXPLANATIONS. NO SUMMARIES. GENERATE ALL 35 CATEGORIES WITH EXTREMELY DETAILED CONTENT FOR 25,000+ WORD TOTAL ANALYSIS."""
+
+    try:
+        print(f"Generating extremely comprehensive comparison with all 35 categories for {from_board} vs {to_board}...")
+        
+        # Call Claude API with increased timeout for comprehensive response
+        response_text = call_claude_api(comprehensive_prompt)
+        
+        # Clean the response to extract JSON
+        response_text = response_text.strip()
+        if response_text.startswith('```json'):
+            response_text = response_text[7:-3]
+        elif response_text.startswith('```'):
+            response_text = response_text[3:-3]
+        
+        # Parse JSON response
+        try:
+            comparison_data = json.loads(response_text)
+            categories = comparison_data.get('categories', [])
+            
+            print(f"Successfully generated {len(categories)} categories from Claude API")
+            
+            # If we got fewer than 35 categories, generate the missing ones in batches
+            if len(categories) < 35:
+                print(f"Only received {len(categories)} categories, generating remaining {35 - len(categories)} categories...")
+                
+                # Generate missing categories in smaller batches for better quality
+                missing_categories = comprehensive_categories[len(categories):]
+                
+                for i in range(0, len(missing_categories), 2):  # Process 2 categories at a time
+                    batch = missing_categories[i:i+2]
+                    
+                    batch_prompt = f"""Continue the extremely detailed curriculum comparison between {from_board} and {to_board} for {subject} in {grade}.
+
+Generate comprehensive analysis for these {len(batch)} categories with 4-5 detailed paragraphs (400-500 words) per board:
+
+CATEGORIES TO ANALYZE:
+{chr(10).join([f"{j+1}. {cat}" for j, cat in enumerate(batch)])}
+
+SPECIAL FOCUS FOR PROGRAMME STRUCTURE:
+If analyzing Programme Structure & Year Classifications, include:
+- Complete grade-wise breakdown with exact age ranges
+- Board-specific programme levels and qualifications
+- Examination schedules and assessment timelines
+- Progression pathways and transfer mechanisms
+- Duration comparisons and structural flexibility
+- Entry/exit points and alternative routes
+
+Include specific details for {grade} {subject}:
+- Board-specific terminology and professional language
+- Exact costs, fees, and financial implications
+- Specific examination formats and assessment criteria
+- Teacher qualification and training requirements
+- University recognition patterns and admission pathways
+- Technology platforms and digital learning systems
+- Regional variations and cultural adaptations
+
+Respond with valid JSON only:
+{{
+  "categories": [
+    {{
+      "name": "{batch[0] if batch else 'Category'}",
+      "fromBoardContent": "4-5 extremely detailed paragraphs about {from_board} approach to {batch[0].lower() if batch else 'this category'} with specific examples for {grade} {subject}, professional terminology, costs, assessment details, programme structure specifics, and practical implications...",
+      "toBoardContent": "4-5 extremely detailed paragraphs about {to_board} approach to {batch[0].lower() if batch else 'this category'} with specific examples for {grade} {subject}, professional terminology, costs, assessment details, programme structure specifics, and practical implications..."
+    }}
+    // Continue for all {len(batch)} categories in this batch
+  ]
+}}
+
+Each paragraph must be 100+ words with concrete details, specific examples, costs, programme structure details, and professional terminology."""
+                    
+                    try:
+                        batch_response = call_claude_api(batch_prompt)
+                        batch_response = batch_response.strip()
+                        if batch_response.startswith('```json'):
+                            batch_response = batch_response[7:-3]
+                        elif batch_response.startswith('```'):
+                            batch_response = batch_response[3:-3]
+                        
+                        batch_data = json.loads(batch_response)
+                        batch_categories = batch_data.get('categories', [])
+                        categories.extend(batch_categories)
+                        print(f"Added batch {i//2 + 1}: {len(batch_categories)} categories")
+                        
+                    except Exception as batch_error:
+                        print(f"Error generating batch {i//2 + 1}: {str(batch_error)}")
+                        # Add comprehensive fallback category
+                        for cat in batch:
+                            categories.append(generate_comprehensive_fallback_category(cat, from_board, to_board, grade, subject))
+            
+            # Ensure we have exactly 35 categories
+            while len(categories) < 35:
+                missing_category = comprehensive_categories[len(categories)]
+                categories.append(generate_comprehensive_fallback_category(missing_category, from_board, to_board, grade, subject))
+            
+            # Limit to exactly 35 categories
+            categories = categories[:35]
+            
+            print(f"Final result: {len(categories)} comprehensive categories generated")
+            
+            return {
+                'fromBoard': from_board,
+                'toBoard': to_board,
+                'grade': grade,
+                'subject': subject,
+                'categories': categories,
+                'totalCategories': len(categories),
+                'analysisDepth': 'Comprehensive 35-category analysis with detailed programme structure',
+                'wordCount': 'Approximately 25,000+ words'
+            }
+            
+        except json.JSONDecodeError as json_error:
+            print(f"JSON parsing error: {str(json_error)}")
+            print(f"Response preview: {response_text[:500]}...")
+            
+            # Generate comprehensive fallback data with all categories
+            return generate_complete_comprehensive_fallback(from_board, to_board, grade, subject, comprehensive_categories)
+            
+    except Exception as e:
+        print(f"Error in generate_3_column_table_comparison: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return generate_complete_comprehensive_fallback(from_board, to_board, grade, subject, comprehensive_categories)
+
+def generate_comprehensive_fallback_category(category_name, from_board, to_board, grade, subject):
+    """Generate extremely detailed fallback content for a single category with comprehensive board-specific details"""
+    
+    # Comprehensive board-specific details and terminology
+    board_comprehensive_details = {
+        'CBSE': {
+            'structure': 'Primary (1-5), Middle (6-8), Secondary (9-10), Senior Secondary (11-12)',
+            'ages': 'Ages 6-18 with grade-appropriate progression',
+            'grading': 'A1-E grade system with CGPA calculation and 9-point scale',
+            'exams': 'Annual board examinations in March with 80% external + 20% internal assessment',
+            'terminology': 'CCE system, competency-based questions, NCERT alignment, formative/summative assessment',
+            'costs': '₹2,50,000 average annual fees + ₹3,500 board exam fees + coaching ₹1,25,000',
+            'recognition': 'Recognized by Indian universities and increasingly by international institutions worldwide',
+            'teachers': 'B.Ed qualification required with subject expertise and government training',
+            'sessions': 'Annual examination in February-March with results in May-June'
+        },
+        'ICSE': {
+            'structure': 'Primary (1-4), Middle (5-7), Secondary (8-10), Higher Secondary (11-12)',
+            'ages': 'Ages 6-18 with English-medium instruction throughout',
+            'grading': 'Percentage-based system with detailed subject-wise analysis and comprehensive assessment',
+            'exams': 'Annual board examinations with rigorous assessment standards and practical components',
+            'terminology': 'English-medium instruction, comprehensive syllabi, analytical assessment, detailed curriculum',
+            'costs': '₹4,00,000-8,00,000 annual fees + examination fees + practical costs',
+            'recognition': 'Globally recognized for academic rigor and English proficiency with university acceptance',
+            'teachers': 'High qualification standards with English proficiency and subject specialization',
+            'sessions': 'Annual examinations with comprehensive practical and theory components'
+        },
+        'IB': {
+            'structure': 'PYP (3-12), MYP (11-16), DP (16-19), CP (16-19) with seamless progression',
+            'ages': 'Ages 3-19 across four interconnected programmes with international standards',
+            'grading': '1-7 scale with criterion-referenced assessment using A, B, C, D criteria framework',
+            'exams': 'Continuous assessment with optional eAssessment and external moderation systems',
+            'terminology': 'ATL skills, global contexts, inquiry-based learning, international mindedness, CAS',
+            'costs': '₹15,00,000+ annual fees + eAssessment costs + extensive resource requirements',
+            'recognition': 'Premium global recognition with direct university admission pathways worldwide',
+            'teachers': 'Mandatory IB training and certification with ongoing professional development',
+            'sessions': 'Continuous assessment with external examinations in May and November'
+        },
+        'Cambridge': {
+            'structure': 'Primary (5-11), Lower Secondary (11-14), IGCSE (14-16), A-Levels (16-18)',
+            'ages': 'Ages 5-18 with flexible entry points and international progression pathways',
+            'grading': 'A*-G scale with Assessment Objectives (AO1-AO6) framework and grade boundaries',
+            'exams': 'June and November sessions with theory, practical, and coursework components',
+            'terminology': 'Core/Extended tiers, moderation, standardization, Cambridge International qualifications',
+            'costs': '₹5,50,000 annual fees + ₹40,000 per subject examination fees + resource costs',
+            'recognition': 'Gold standard global recognition with worldwide university acceptance and transferability',
+            'teachers': 'Subject specialization with Cambridge training and international teaching qualifications',
+            'sessions': 'Multiple examination sessions (March, June, November) with global coordination'
+        },
+        'State Board': {
+            'structure': 'Primary (1-5), Upper Primary (6-8), Secondary (9-10), Higher Secondary (11-12)',
+            'ages': 'Ages 6-18 with regional language integration and cultural relevance',
+            'grading': 'Percentage-based with state-specific evaluation criteria and regional standards',
+            'exams': 'Annual state board examinations with regional focus and local relevance',
+            'terminology': 'Regional language emphasis, cultural integration, local relevance, state curriculum',
+            'costs': '₹1,50,000-3,00,000 annual fees with minimal examination costs and accessibility focus',
+            'recognition': 'Regional recognition with increasing national and international acceptance',
+            'teachers': 'State qualification requirements with regional language proficiency and cultural knowledge',
+            'sessions': 'Annual examinations aligned with state academic calendar and regional needs'
+        }
+    }
+    
+    from_details = board_comprehensive_details.get(from_board, board_comprehensive_details['CBSE'])
+    to_details = board_comprehensive_details.get(to_board, board_comprehensive_details['IB'])
+    
+    # Special detailed content for Programme Structure & Year Classifications
+    if 'Programme Structure' in category_name:
+        return {
+            'name': category_name,
+            'fromBoardContent': f"The {from_board} programme structure represents a meticulously designed educational framework that encompasses {from_details['structure']} covering {from_details['ages']}, ensuring systematic academic progression and developmentally appropriate learning experiences. This comprehensive structural organization provides clear pathways for students from foundational learning through advanced specialized study, with each stage building upon previous knowledge while introducing increasingly complex concepts and skills. The grade-wise classification system incorporates specific learning milestones, assessment benchmarks, and progression requirements that students must achieve before advancing to subsequent levels, creating a robust educational foundation that prepares students for higher education and professional success.\n\nThe assessment and examination structure within {from_board} utilizes {from_details['grading']} and follows {from_details['exams']}, providing comprehensive evaluation of student learning and achievement. The temporal organization includes {from_details['sessions']} that coordinate with national and international academic calendars, ensuring students receive timely feedback and qualification recognition. The programme incorporates {from_details['terminology']} that reflects the board's educational philosophy and assessment methodology, creating a coherent learning experience that emphasizes both academic excellence and holistic development.\n\nFinancially, the {from_board} programme structure requires an investment of {from_details['costs']}, making it accessible to diverse socio-economic backgrounds while maintaining educational quality and standards. The structure includes mandatory teacher qualification requirements where {from_details['teachers']}, ensuring consistent educational delivery across affiliated institutions. The programme provides {from_details['recognition']}, offering students multiple pathways for higher education and career opportunities both domestically and internationally.\n\nThe structural framework incorporates flexibility for student needs while maintaining rigorous academic standards, including provisions for supplementary examinations, improvement opportunities, and credit transfer mechanisms. The programme design emphasizes continuous internal assessment integrated with terminal examinations, creating a balanced evaluation system that reduces exam pressure while maintaining academic rigor. Regular structural reviews and updates ensure the programme remains relevant to changing educational needs, technological advancements, and global academic trends while preserving core educational philosophy and learning objectives that have proven successful over time.",
+            
+            'toBoardContent': f"The {to_board} programme structure embodies an internationally recognized educational continuum that encompasses {to_details['structure']} spanning {to_details['ages']}, providing seamless progression across distinct yet interconnected programme levels designed for specific developmental stages. This sophisticated structural hierarchy ensures students receive internationally benchmarked curriculum experiences while building essential skills for global citizenship and lifelong learning within a framework that maintains consistent high academic standards across diverse cultural and educational contexts worldwide.\n\nThe assessment and qualification structure utilizes {to_details['grading']} with {to_details['exams']}, emphasizing criterion-referenced evaluation that measures student achievement against clearly defined international standards rather than comparative peer performance. The programme follows {to_details['sessions']} that accommodate international examination schedules, providing flexibility for schools in different hemispheres while maintaining global consistency. The framework incorporates {to_details['terminology']} that reflects the programme's commitment to international mindedness, inquiry-based learning, and comprehensive skill development beyond traditional academic boundaries.\n\nThe financial investment required for {to_board} education includes {to_details['costs']}, reflecting the premium nature of international education and comprehensive support systems provided to students and families. The programme mandates {to_details['teachers']}, ensuring consistent quality delivery through rigorous professional development and ongoing assessment training that maintains international standards. Students benefit from {to_details['recognition']}, providing access to top universities worldwide and global career opportunities through established transfer protocols and recognition agreements.\n\nThe programme structure incorporates multiple language requirements, intercultural competency development, and global perspective integration that prepare students for international higher education and global career success. The framework includes extended essay research, theory of knowledge exploration, creativity-activity-service experiences, and personal projects that demonstrate independent learning capabilities and real-world application of academic knowledge. Regular programme evaluation through external validation, stakeholder feedback, and international research ensures continuous improvement and relevance to changing global educational needs while maintaining the programme's distinctive international character and educational excellence that sets it apart from national education systems."
+        }
+    
+    # General detailed content for other categories
+    return {
+        'name': category_name,
+        'fromBoardContent': f"The {from_board} approach to {category_name.lower()} represents a comprehensive educational framework specifically designed for {grade} {subject} students that incorporates {from_details['terminology']} and utilizes {from_details['grading']}. This methodology incorporates evidence-based practices developed through extensive research and practical implementation across diverse educational settings, emphasizing systematic progression of learning objectives while maintaining flexibility to accommodate different learning styles, individual student paces, and varying institutional contexts. Regular assessment and monitoring mechanisms ensure educational goals are consistently met while identifying areas for improvement and enrichment opportunities that align with the board's pedagogical philosophy and assessment standards.\n\nThe pedagogical strategies employed focus on active learning methodologies that encourage student participation, engagement, and ownership of the learning process through various instructional approaches including collaborative learning, problem-based learning, inquiry-based instruction, and differentiated teaching methods. The assessment philosophy incorporates {from_details['exams']} providing meaningful, timely feedback to students and educators, enabling continuous improvement and adaptation of teaching strategies while maintaining consistency with board expectations. The programme structure follows {from_details['structure']} ensuring age-appropriate curriculum delivery and developmental progression.\n\nFinancially, families investing in {from_board} education can expect {from_details['costs']}, making it accessible to various socio-economic backgrounds while maintaining quality educational standards. The system emphasizes critical thinking skills development, analytical reasoning, and practical application of knowledge gained in {subject}, consistently encouraging students to connect theoretical concepts with real-world scenarios. This promotes deeper understanding, long-term retention of learning materials, and transfer of skills to new contexts that prepare students for future academic and professional success.\n\nThe implementation strategy includes comprehensive teacher training where {from_details['teachers']}, ongoing professional development, resource allocation, and quality assurance mechanisms ensuring consistent delivery of high-quality education across participating institutions. The programme provides {from_details['recognition']}, offering students pathways to higher education and career opportunities. Regular curriculum review, stakeholder feedback, and alignment with educational standards maintain programme relevance and effectiveness while ensuring students receive contemporary education meeting current and future needs.",
+        
+        'toBoardContent': f"The {to_board} framework for {category_name.lower()} is built upon international best practices and global educational standards that emphasize student-centered learning approaches, critical inquiry, and holistic development. This comprehensive system is specifically designed for {grade} {subject} to foster independent thinking, creativity, collaborative skills, and global citizenship essential for success in the modern interconnected world. The curriculum framework incorporates {to_details['terminology']} and utilizes {to_details['grading']} encouraging students to explore, question, investigate, and discover knowledge through guided exploration, hands-on experiences, and authentic real-world applications.\n\nThe pedagogical strategies emphasize active, experiential learning through hands-on experiences, collaborative projects, research-based assignments, and real-world problem-solving activities specifically relevant to {subject} in {grade}. Students are encouraged to take ownership of their learning journey while developing essential 21st-century skills including communication, collaboration, creativity, critical thinking, and digital literacy. The assessment philosophy focuses on {to_details['exams']} measuring student achievement against clearly defined international learning standards rather than comparative peer performance, promoting individual growth, development, and mastery of essential competencies.\n\nThe financial investment in {to_details['costs']} reflects the premium nature of international education and comprehensive support systems provided. The international perspective embedded throughout ensures students develop global awareness, cultural competency, and intercultural understanding necessary for success in an increasingly interconnected world. The programme emphasizes multilingual development, cross-cultural communication, and global citizenship preparing students for international mobility and global career opportunities while maintaining high academic standards and rigorous assessment criteria.\n\nThe implementation strategy includes rigorous teacher training where {to_details['teachers']}, ongoing professional development, comprehensive resource provision, and continuous quality assurance ensuring consistent delivery of high-quality international education. Students benefit from {to_details['recognition']}, providing premium pathways to top universities worldwide through established recognition agreements and transfer protocols. Regular curriculum reviews, international benchmarking, stakeholder feedback, and alignment with global educational research ensure the programme remains innovative, effective, and responsive to changing educational needs and global trends while maintaining its position as a leader in international education excellence."
+    }
+
+def generate_complete_comprehensive_fallback(from_board, to_board, grade, subject, categories):
+    """Generate complete comprehensive fallback data when Claude API fails"""
+    print("Generating complete comprehensive fallback comparison with all 35 categories including detailed Programme Structure...")
+    
+    fallback_categories = []
+    for category in categories:
+        fallback_categories.append(generate_comprehensive_fallback_category(category, from_board, to_board, grade, subject))
+    
+    return {
+        'fromBoard': from_board,
+        'toBoard': to_board,
+        'grade': grade,
+        'subject': subject,
+        'categories': fallback_categories,
+        'totalCategories': len(fallback_categories),
+        'analysisDepth': 'Complete comprehensive fallback with all 35 categories including detailed Programme Structure',
+        'wordCount': 'Approximately 25,000+ words',
+        'note': 'Comprehensive fallback comparison generated with all key differences and detailed programme structure analysis'
+    }
+
+def generate_parent_guidance(from_board, to_board, grade, subject):
+    """Generate detailed parent guidance for curriculum transition"""
+    detailed_parent_prompt = f"""You are an educational counselor specializing in curriculum transitions. A parent is seeking detailed guidance for their child's transition from {from_board} to {to_board} for {subject} in {grade}.
+
+Provide COMPREHENSIVE, DETAILED guidance covering every aspect parents need to know:
+
+## IMMEDIATE PREPARATION (What to do RIGHT NOW)
+- Detailed steps to prepare their child academically and mentally
+- Documents and paperwork required (be specific)
+- Timeline for application and enrollment processes
+- How to research and select the right school
+- Financial planning and budgeting considerations
+
+## ACADEMIC PREPARATION STRATEGY
+- Specific knowledge gaps that need to be addressed
+- Skills their child needs to develop before transition
+- Study habits and learning strategies to establish
+- How to bridge curriculum differences in {subject}
+- Recommended preparatory materials and resources
+
+## UNDERSTANDING THE NEW LEARNING ENVIRONMENT
+- How daily school life will change for their child
+- New expectations for homework and study time
+- Different assessment methods their child will face
+- Changes in teacher-student interaction styles
+- Peer interaction and social dynamics
+
+## SUPPORTING YOUR CHILD THROUGH THE TRANSITION
+- How to identify and address adjustment difficulties
+- Warning signs of academic or social struggles
+- Communication strategies with teachers and school
+- How to maintain motivation during challenging periods
+- Building confidence in the new system
+
+Provide specific, actionable advice that empowers parents to confidently support their child through this important transition."""
+
+    try:
+        return call_claude_api(detailed_parent_prompt)
+    except Exception as e:
+        print(f"Error generating parent guidance: {str(e)}")
+        return f"Error generating detailed parent guidance: {str(e)}"
+
+def generate_teacher_guidance(from_board, to_board, grade, subject):
+    """Generate detailed teacher guidance for curriculum transition"""
+    detailed_teacher_prompt = f"""You are providing comprehensive professional development guidance to teachers transitioning from teaching {from_board} curriculum to {to_board} curriculum for {subject} in {grade}.
+
+Provide DETAILED, PRACTICAL guidance covering every aspect teachers need to master:
+
+## PEDAGOGICAL TRANSFORMATION
+- Detailed comparison of teaching philosophies between {from_board} and {to_board}
+- Specific methodology changes required for {subject} in {grade}
+- Student engagement strategies unique to {to_board} approach
+- Classroom management adaptations needed
+
+## CURRICULUM CONTENT MASTERY
+- Detailed content differences in {subject} for {grade}
+- New topics to master and teach
+- Depth vs. breadth adjustments in content coverage
+- Integration strategies with other subjects
+
+## ASSESSMENT & EVALUATION TRANSFORMATION
+- Complete overhaul of assessment strategies
+- New rubrics and grading criteria to implement
+- Formative vs. summative assessment balance
+- Portfolio and project-based assessment techniques
+
+## PROFESSIONAL DEVELOPMENT PATHWAY
+- Specific certifications and qualifications needed for {to_board}
+- Training programs and workshops to attend
+- Mentorship and coaching opportunities
+- Professional learning community engagement
+
+Provide specific, actionable professional guidance that enables teachers to excel in delivering {to_board} curriculum for {subject} in {grade}."""
+
+    try:
+        return call_claude_api(detailed_teacher_prompt)
+    except Exception as e:
+        print(f"Error generating teacher guidance: {str(e)}")
+        return f"Error generating detailed teacher guidance: {str(e)}"
+
+def call_claude_api(prompt):
+    """Make API call to Claude with proper error handling"""
+    headers = {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01'
+    }
+    
+    payload = {
+        'model': 'claude-3-5-sonnet-20241022',
+        'max_tokens': 8000,
+        'messages': [
+            {
+                'role': 'user',
+                'content': prompt
+            }
+        ]
+    }
+    
+    try:
+        print(f"Making API call to Claude...")
+        response = requests.post(CLAUDE_API_URL, headers=headers, json=payload, timeout=120)
+        
+        print(f"Response status: {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result['content'][0]['text']
+        else:
+            error_text = response.text
+            print(f"API Error: {error_text}")
+            return f"API request failed with status {response.status_code}: {error_text}"
+            
+    except requests.exceptions.Timeout:
+        error_msg = "API request timed out after 120 seconds"
+        print(error_msg)
+        return error_msg
+    except requests.exceptions.RequestException as req_error:
+        error_msg = f"API request failed: {str(req_error)}"
+        print(error_msg)
+        return error_msg
+    except Exception as e:
+        error_msg = f"API call failed: {str(e)}"
+        print(error_msg)
+        return error_msg
+
+@app.errorhandler(404)
+def not_found_error(error):
+    try:
+        return render_template('index.html'), 404
+    except Exception:
+        return jsonify({'error': 'Page not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    print(f"Internal server error: {str(error)}")
+    return jsonify({'error': 'Internal server error'}), 500
+
+if __name__ == '__main__':
+    print("Starting Curriculum Converter Flask Application...")
+    print(f"Claude API configured: {'Yes' if CLAUDE_API_KEY else 'No'}")
+    app.run(debug=True, host='0.0.0.0', port=5001)
